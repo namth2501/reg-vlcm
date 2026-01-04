@@ -31,9 +31,20 @@ async def worker(queue, ocr_solver, audio_solver, progress, total_count):
             await asyncio.sleep(2) # Backoff slightly
 
 async def main():
+    # Load config defaults
+    import json
+    import os
+    config = {"count": 1, "concurrency": 1}
+    if os.path.exists("config.json"):
+        try:
+            with open("config.json", "r") as f:
+                config.update(json.load(f))
+        except Exception as e:
+            print(f"Warning: Failed to load config.json: {e}")
+
     parser = argparse.ArgumentParser(description="Automate VLCM Account Registration")
-    parser.add_argument("--count", type=int, default=1, help="Number of accounts to register")
-    parser.add_argument("--concurrency", type=int, default=1, help="Number of concurrent browsers")
+    parser.add_argument("--count", type=int, default=config.get("count", 1), help="Number of accounts to register")
+    parser.add_argument("--concurrency", type=int, default=config.get("concurrency", 1), help="Number of concurrent browsers")
     
     args = parser.parse_args()
     
