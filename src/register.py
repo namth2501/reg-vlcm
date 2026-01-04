@@ -8,7 +8,7 @@ import time
 # Helper to capture and solve CAPTCHAs
 # Note: AI models should be passed in to avoid reloading them per browser instance
 
-async def register_account(ocr_solver, audio_solver, headless=False):
+async def register_account(ocr_solver, audio_solver, headless=False, task_id=0):
     """
     Registers a single account.
     ocr_solver: Instance of OCRSolver
@@ -25,15 +25,33 @@ async def register_account(ocr_solver, audio_solver, headless=False):
     
     # Patchright execution
     async with async_playwright() as p:
-        # Launch options - can add args to avoid detection if needed
-        # Patchright is designed to be stealthy by default
-        browser = await p.chromium.launch(headless=headless)
-        context = await browser.new_context()
+        # Calculate window position based on task_id
+        # Layout: Grid of 4 columns
+        # Window size: 500x700
+        width = 500
+        height = 700
+        cols = 4
+        x = (task_id % cols) * width
+        y = (task_id // cols) * height
+        
+        args = [
+            f"--window-size={width},{height}",
+            f"--window-position={x},{y}",
+            "--disable-blink-features=AutomationControlled"
+        ]
+        
+        browser = await p.chromium.launch(headless=headless, args=args)
+        
+        # Create context with viewport matching window
+        context = await browser.new_context(viewport={'width': width, 'height': height})
         page = await context.new_page()
         
         try:
-            print(f"[{username}] Navigating...")
+            print(f"[{username}] Navigating... (Task {task_id}, Pos: {x},{y})")
             await page.goto("https://vlcm.zing.vn/")
+            
+            # Apply Zoom 0.7 as requested
+            await page.evaluate("document.body.style.zoom = '0.7'")
             
             # Click 'Đăng ký nhanh'
             # Use specific ID found by inspection
@@ -112,23 +130,21 @@ async def register_account(ocr_solver, audio_solver, headless=False):
                 
                 # Click audio button to request audio challenge
                 await challenge_frame.locator('#recaptcha-audio-button').click()
-                await asyncio.sleep(2) # Wait for audio challenge to load
                 
-                # Locate the audio download link
-                # Standard ReCaptcha has a 'Download' button/link with class 'rc-audiochallenge-tdownload-link'
-                # Or we can look for the audio source URL
-                download_link = challenge_frame.locator('.rc-audiochallenge-tdownload-link')
-                
-                if await download_link.count() > 0:
+                # Check for "Try again later" error immediately
+                # Selector for error: .rc-doscaptcha-header-text
+                try:
+                    # Wait up to 5 seconds for either download link OR error message
+                    # We can't wait for both simultaneously easily with just wait_for, so we poll or use race.
+                    # Simple approach: Wait for download link with timeout.
+                    
+                    download_link = challenge_frame.locator('.rc-audiochallenge-tdownload-link')
+                    await download_link.wait_for(state="visible", timeout=5000)
+                    
                     audio_url = await download_link.get_attribute('href')
                     print(f"[{username}] Audio URL found: {audio_url}")
                     
                     # Download audio
-                    # We can't simple 'goto' the url in the main page sometimes (it might be a blob or require cookies)
-                    # But usually for ReCaptcha it works or we use request context
-                    
-                    # Create a new page or use request context to download
-                    # To avoid navigating away, use APIRequestContext
                     response = await page.request.get(audio_url)
                     audio_bytes = await response.body()
                     
@@ -142,23 +158,31 @@ async def register_account(ocr_solver, audio_solver, headless=False):
                     print(f"[{username}] Audio Result: {audio_text}")
                     
                     # Clean up
-                    os.remove(temp_audio_file)
+                    try:
+                        os.remove(temp_audio_file)
+                    except:
+                        pass
                     
                     # Fill audio input: #audio-response
                     await challenge_frame.locator('#audio-response').fill(audio_text)
-                    await asyncio.sleep(3)
+                    await asyncio.sleep(1)
                     
                     # Click Verify: #recaptcha-verify-button
                     await challenge_frame.locator('#recaptcha-verify-button').click()
                     await asyncio.sleep(4)
-                else:
-                    print(f"[{username}] Audio download link not found. Might be blocked or different UI.")
+
+                except Exception as e_link:
+                    # Check if it was an IP block/error message
+                    if await challenge_frame.locator('.rc-doscaptcha-header-text').is_visible():
+                        print(f"[{username}] ReCaptcha Error: Your queries are acting like an automated computer (IP Block).")
+                    else:
+                        print(f"[{username}] Audio download link not found or timeout: {e_link}")
         
             except Exception as e:
-                print(f"[{username}] No ReCaptcha challenge interaction: {e}")
+                print(f"[{username}] ReCaptcha interaction failed: {e}")
 
             if await page.locator('#reg_account').is_visible():
-                print(f"[{username}] Registration failed.")
+                print(f"[{username}] Registration failed (Form still visible).")
                 raise Exception("Registration failed.")
 
 

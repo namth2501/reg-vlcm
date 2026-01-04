@@ -1,0 +1,6 @@
+patchright
+openai-whisper
+transformers
+torch
+pillow
+pyinstaller

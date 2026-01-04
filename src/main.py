@@ -15,7 +15,7 @@ async def worker(queue, ocr_solver, audio_solver, progress, total_count):
         try:
             print(f"Starting registration task {task_id}")
             # Run without headless to see what's happening, or pass args.headless if we added it
-            await register_account(ocr_solver, audio_solver, headless=False)
+            await register_account(ocr_solver, audio_solver, headless=False, task_id=task_id)
             
             # Update progress
             progress['current'] += 1
@@ -34,6 +34,10 @@ async def main():
     # Load config defaults
     import json
     import os
+    
+    # Ensure local ffmpeg (if downloaded by setup.py) is in PATH
+    os.environ["PATH"] = os.getcwd() + os.pathsep + os.environ["PATH"]
+
     config = {"count": 1, "concurrency": 1}
     if os.path.exists("config.json"):
         try:
