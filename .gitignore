@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+
+# Mac
+.DS_Store
+
+# Project Artifacts
+accounts.txt
+errors/
+*.png
+*.mp3
+temp_audio_*
+*.log

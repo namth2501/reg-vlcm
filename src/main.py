@@ -5,20 +5,30 @@ from src.utils.audio import AudioSolver
 from src.register import register_account
 import sys
 
-async def worker(queue, ocr_solver, audio_solver, semaphore):
+async def worker(queue, ocr_solver, audio_solver, progress, total_count):
     """
-    Worker that consumes tasks from queue and runs registration with concurrency limit.
+    Worker that consumes tasks from queue and runs registration.
+    If fails, puts task back to queue.
     """
     while True:
         task_id = await queue.get()
-        async with semaphore:
-            try:
-                print(f"Starting registration task {task_id}")
-                await register_account(ocr_solver, audio_solver, headless=False)
-            except Exception as e:
-                print(f"Task {task_id} failed: {e}")
-            finally:
-                queue.task_done()
+        try:
+            print(f"Starting registration task {task_id}")
+            # Run without headless to see what's happening, or pass args.headless if we added it
+            await register_account(ocr_solver, audio_solver, headless=False)
+            
+            # Update progress
+            progress['current'] += 1
+            print(f"[{progress['current']}/{total_count}] Task {task_id} Completed Successfully.")
+            
+            queue.task_done()
+        except Exception as e:
+            print(f"Task {task_id} Failed: {e}")
+            print(f"Retrying task {task_id}...")
+            # Put back in queue to retry
+            queue.put_nowait(task_id)
+            queue.task_done()
+            await asyncio.sleep(2) # Backoff slightly
 
 async def main():
     parser = argparse.ArgumentParser(description="Automate VLCM Account Registration")
@@ -27,42 +37,40 @@ async def main():
     
     args = parser.parse_args()
     
-    print(f"Initializing automation: {args.count} accounts, {args.concurrency} concurrent threads.")
+    print(f"Initializing automation: {args.count} targets, {args.concurrency} threads.")
     
-    # 1. Load Models Once (Global Singleton pattern)
+    # 1. Load Models Once
     print("Loading AI Models...")
     try:
         ocr_solver = OCRSolver(model_name='anuashok/ocr-captcha-v3')
-        # Using 'base' model for audio as tested
         audio_solver = AudioSolver(model_size="base")
     except Exception as e:
         print(f"Failed to initialize models: {e}")
         sys.exit(1)
         
-    # 2. Setup Queue and Workers
+    # 2. Setup Queue
     queue = asyncio.Queue()
     for i in range(args.count):
         queue.put_nowait(i)
         
-    semaphore = asyncio.Semaphore(args.concurrency)
-    
+    # 3. Start Workers
+    progress = {'current': 0}
     workers = []
-    # Create workers equal to concurrency (or count if smaller, but logic is same)
-    # Actually, we can spawn 'concurrency' number of long-running workers
-    # OR spawn 'count' tasks and let semaphore limit them.
-    # Spawning 'count' tasks is cleaner for simple logic.
+    for _ in range(args.concurrency):
+        task = asyncio.create_task(worker(queue, ocr_solver, audio_solver, progress, args.count))
+        workers.append(task)
     
-    tasks = []
-    for i in range(args.count):
-        # We need to wrap the call with semaphore
-        tasks.append(asyncio.create_task(run_protected(semaphore, ocr_solver, audio_solver, i)))
+    # 4. Wait for queue to process all items
+    await queue.join()
     
-    await asyncio.gather(*tasks)
-    print("All tasks completed.")
-
-async def run_protected(semaphore, ocr, audio, idx):
-    async with semaphore:
-         await register_account(ocr, audio, headless=False)
+    print(f"All {args.count} registration tasks finished successfully.")
+    
+    # Cancel workers
+    for w in workers:
+        w.cancel()
+    
+    # Wait for workers to cancel (optional)
+    await asyncio.gather(*workers, return_exceptions=True)
 
 if __name__ == "__main__":
     asyncio.run(main())
