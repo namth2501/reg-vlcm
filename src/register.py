@@ -28,14 +28,11 @@ async def register_account(ocr_solver, audio_solver, headless=False, task_id=0):
         # Calculate window position based on task_id
         # Layout: Grid of 4 columns
         # Window size: 500x700
-        width = 500
-        height = 700
         cols = 4
-        x = (task_id % cols) * width
-        y = (task_id // cols) * height
+        x = (task_id % cols) * 500
+        y = (task_id // cols) * 300
         
         args = [
-            f"--window-size={width},{height}",
             f"--window-position={x},{y}",
             "--disable-blink-features=AutomationControlled"
         ]
