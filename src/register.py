@@ -33,22 +33,18 @@ async def register_account(ocr_solver, audio_solver, headless=False, task_id=0):
         y = (task_id // cols) * 300
         
         args = [
-            f"--window-position={x},{y}",
-            "--disable-blink-features=AutomationControlled"
+            f"--window-position={x},{y}"
         ]
         
         browser = await p.chromium.launch(headless=headless, args=args)
         
         # Create context with viewport matching window
-        context = await browser.new_context(viewport={'width': width, 'height': height})
+        context = await browser.new_context()
         page = await context.new_page()
         
         try:
             print(f"[{username}] Navigating... (Task {task_id}, Pos: {x},{y})")
             await page.goto("https://vlcm.zing.vn/")
-            
-            # Apply Zoom 0.7 as requested
-            await page.evaluate("document.body.style.zoom = '0.7'")
             
             # Click 'Đăng ký nhanh'
             # Use specific ID found by inspection
