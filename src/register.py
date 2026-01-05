@@ -8,6 +8,13 @@ import time
 # Helper to capture and solve CAPTCHAs
 # Note: AI models should be passed in to avoid reloading them per browser instance
 
+def ramdom_username():
+    username = ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
+    # Make sure username starts with a letter
+    if username[0].isdigit():
+        username = 'a' + username[1:]
+    return username
+
 async def register_account(ocr_solver, audio_solver, headless=False, task_id=0):
     """
     Registers a single account.
@@ -16,11 +23,8 @@ async def register_account(ocr_solver, audio_solver, headless=False, task_id=0):
     """
     
     # Generate random creds
-    username = ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
-    # Make sure username starts with a letter
-    if username[0].isdigit():
-        username = 'a' + username[1:]
-        
+    username = ramdom_username()
+    
     password = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
     
     # Patchright execution
@@ -68,6 +72,17 @@ async def register_account(ocr_solver, audio_solver, headless=False, task_id=0):
             await page.click('#reg_cpwd')
             await asyncio.sleep(0.1)
             
+            await page.click('#reg_account')
+            await asyncio.sleep(1)
+            # check if has #reg_account_error with display not none <div class="zme_wg_rowlogin notelog txtfail" id="reg_account_error" style="display: none;">Tài khoản này đã tồn tại.</div>
+            # then use another username and fill again
+            if await page.locator('#reg_account_error').is_visible():
+                username = ramdom_username()
+                await page.locator('#reg_account').clear()
+                await page.fill('#reg_account', username)
+                await page.click('#reg_account')
+                await asyncio.sleep(0.1)
+
             # --- Visual CAPTCHA ---
             # Selector found: #captcha
             captcha_img = page.locator('#captcha')
