@@ -4,3 +4,4 @@ transformers
 torch
 pillow
 pyinstaller
+aiohttp

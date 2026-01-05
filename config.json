@@ -1,4 +1,13 @@
 {
-    "count": 10,
-    "concurrency": 3
+  "count": 1,
+  "concurrency": 1,
+  "captcha_solver": "omocaptcha",
+  "omocaptcha_api_key": "",
+  "save_ocr_images": false,
+  "use_gpm": true,
+  "gpm_host": "127.0.0.1",
+  "gpm_port": 19995,
+  "gpm_profile_name_prefix": "vlcm_reg_",
+  "gpm_group_name": "All",
+  "gpm_raw_proxy": ""
 }
