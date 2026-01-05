@@ -87,7 +87,7 @@ class GpmLoginClient:
                 params['win_scale'] = options.get('win_scale', 0.6)
             if 'win_pos' in options:
                 params['win_pos'] = options['win_pos']
-        params['win_scale'] = 0.6
+        params['win_scale'] = 0.4
         params['win_size'] = '1920,1080'
         return await self._request('GET', f'/profiles/start/{profile_id}', params=params)
 
