@@ -87,9 +87,8 @@ class GpmLoginClient:
                 params['win_scale'] = options.get('win_scale', 0.6)
             if 'win_pos' in options:
                 params['win_pos'] = options['win_pos']
-            if 'win_size' in options:
-                params['win_size'] = options.get('win_size', '1920x1080')
-        
+           
+        params['win_size'] = '1920,1080'
         return await self._request('GET', f'/profiles/start/{profile_id}', params=params)
 
     async def close_profile(self, profile_id: str) -> Dict[str, Any]:
