@@ -1,8 +1,8 @@
 {
-  "count": 1,
-  "concurrency": 1,
+  "count": 30,
+  "concurrency": 4,
   "captcha_solver": "omocaptcha",
-  "omocaptcha_api_key": "",
+  "omocaptcha_api_key": "apitokenahnyixjkdx1emd4duk20dwmgpnrzvuznjzwr8a2zxzs2rarlbdl2gvfz716lb71726154374",
   "save_ocr_images": false,
   "use_gpm": true,
   "gpm_host": "127.0.0.1",

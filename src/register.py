@@ -109,9 +109,24 @@ async def register_account(ocr_solver, audio_solver, headless=False, task_id=0, 
                 await asyncio.sleep(3)
                 
                 # Calculate window position based on task_id
-                cols = 4
-                x = (task_id % cols) * 500
+                # Window size: 500x700, Screen: 1920x1400
+                window_width = 500
+                window_height = 700
+                screen_width = 1920
+                screen_height = 1400
+                
+                # Calculate max columns and rows that fit on screen
+                max_cols = (screen_width - window_width) // window_width + 1
+                max_rows = (screen_height - window_height) // 300 + 1
+                
+                # Ensure we don't go out of bounds
+                cols = min(4, max_cols)  # Use at most 4 columns or what fits
+                x = (task_id % cols) * window_width
                 y = (task_id // cols) * 300
+                
+                # Clamp to screen bounds
+                x = min(x, screen_width - window_width)
+                y = min(y, screen_height - window_height)
                 
                 # Start GPM profile with window position
                 start_options = {
@@ -172,9 +187,24 @@ async def register_account(ocr_solver, audio_solver, headless=False, task_id=0, 
                 print(f"[{username}] Failed to use GPM profile: {e}")
                 print(f"[{username}] Falling back to regular Chromium launch")
                 # Fallback to regular launch
-                cols = 4
-                x = (task_id % cols) * 500
+                # Window size: 500x700, Screen: 1920x1400
+                window_width = 500
+                window_height = 700
+                screen_width = 1920
+                screen_height = 1400
+                
+                # Calculate max columns and rows that fit on screen
+                max_cols = (screen_width - window_width) // window_width + 1
+                max_rows = (screen_height - window_height) // 300 + 1
+                
+                # Ensure we don't go out of bounds
+                cols = min(4, max_cols)  # Use at most 4 columns or what fits
+                x = (task_id % cols) * window_width
                 y = (task_id // cols) * 300
+                
+                # Clamp to screen bounds
+                x = min(x, screen_width - window_width)
+                y = min(y, screen_height - window_height)
                 
                 args = [
                     f"--window-position={x},{y}"
@@ -186,11 +216,24 @@ async def register_account(ocr_solver, audio_solver, headless=False, task_id=0, 
         else:
             # Regular Chromium launch
             # Calculate window position based on task_id
-            # Layout: Grid of 4 columns
-            # Window size: 500x700
-            cols = 4
-            x = (task_id % cols) * 500
+            # Window size: 500x700, Screen: 1920x1400
+            window_width = 500
+            window_height = 700
+            screen_width = 1920
+            screen_height = 1400
+            
+            # Calculate max columns and rows that fit on screen
+            max_cols = (screen_width - window_width) // window_width + 1
+            max_rows = (screen_height - window_height) // 300 + 1
+            
+            # Ensure we don't go out of bounds
+            cols = min(4, max_cols)  # Use at most 4 columns or what fits
+            x = (task_id % cols) * window_width
             y = (task_id // cols) * 300
+            
+            # Clamp to screen bounds
+            x = min(x, screen_width - window_width)
+            y = min(y, screen_height - window_height)
             
             args = [
                 f"--window-position={x},{y}"
